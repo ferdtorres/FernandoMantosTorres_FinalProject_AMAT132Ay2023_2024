@@ -1,0 +1,406 @@
+---
+title: "CropCast: Forecasting the Quarterly Volumetric Production of Palay in Davao Region"
+author: "Louvel Junn Fernando, Kristine Mantos, Julieferd Torres"
+header-includes:
+  - \usepackage{placeins}
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+<style type="text/css">
+body {
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1.5;
+  margin: 1in;
+  font-size: 12pt;
+  text-align: justify;
+}
+
+p, li {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Times New Roman', Times, serif;
+}
+
+h1.title{
+  text-align: center;
+}
+
+h4.author{
+  text-align: center;
+}
+
+h4.date{
+  text-align: center;
+}
+
+p.caption {
+  text-align: center;
+}
+</style>
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+rm(list=ls())
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(fpp2)
+library(stlplus)
+library(tseries)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+data <- read.csv("C:/Users/Julieferd Torres/Downloads/132/TotalPalayData_RXI.csv")
+```
+
+# 1 INTRODUCTION
+
+The agricultural sector plays a significant role in the Philippine economy, in ensuring food security, and in becoming an important source of income, especially for the rural communities. However, there has been a decline in agricultural production in recent years. In the first quarter of 2024 alone, crop production, which was valued at PhP 247.04 billion, declined by 0.3 percent, and specifically, the value of palay production declined by 2.0 percent [1]. Although in Davao Region, there has been a steady increase in the production for the last three years, with Davao del Sur being the top producer [2], historical data show fluctuations in palay production and that making hasty judgment without the fully understanding the nature of these data endangers many people in the region.
+
+In this study, the researchers used different forecasting techniques to predict the future volumetric production of palay in the region with the primary goal of analyzing historical data, developing accurate forecasts, and enabling informed decision-making for both the governmental and public institutions. By forecasting palay production, awareness about potential fluctuations in the supply of this basic commodity shall be raised.
+
+**1.1. OBJECTIVES**
+
+The objective of this study was to forecast the quarterly palay production in Davao Region for the next five years by comparing the accuracy of different forecasting models. Additionally, this study is aimed at creating recommendations that is directed to concerned personnel on addressing the possible repercussion on what the forecast would entail.
+
+**1.2. SCOPE**
+
+This study only focused on forecasting the quarterly volumetric production of palay in Davao Region, Philippines by utilizing various time series analysis techniques. The researchers only analyzed the historical data ranging from the first quarter of 1987 to the first quarter of 2024.
+
+**1.3. SIGNIFICANCE**
+
+Insights drawn from the forecast developed in this study will contribute to more stable and sustainable agricultural practices ensuring food security in the region. Palay farmers can optimize resource allocation and planting schedules that would consequently lead to improved yields, reduced costs, and increased farm profitability. More importantly, the results of this study can be helpful to government agencies, such as the Department of Agriculture RFO XI, as they craft and implement programs designed to address potential shortfalls in the region’s palay production. Furthermore, post-harvest facilities and distributors may employ necessary steps, such as adjusting inventory management and market strategies, for potential effects of the forecasted production levels.
+
+# 2 METHODS
+
+**2.1. DATA GATHERING PROCEDURE**
+
+The data for this study, palay production, was sourced from the official database of the Philippine Statistics Authority which was accessed through their official website. It was found that the available data from the agency's records can be traced back to the first quarter of 1987 up to the first quarter of 2024. Since this study focuses only on forecasting Davao Region’s quarterly palay production, the researchers only downloaded the necessary data relevant to the study. To aid the researchers during the data processing, preliminary data organization was done in MS Excel. The data was saved in a comma-separated value (CSV) file and was imported into the R software using the read.csv function.
+
+**2.2. DATA PROCESSING AND TECHNIQUES**
+
+A preliminary analysis was conducted to understand the data set’s structure and characteristics. First, to facilitate time series analysis, the data was converted into a time series object with quarterly frequency. Figure 1 shows the time plot generated to visualize the overall trend in palay production showing its fluctuations quarter after quarter through the years.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+Palay.ts <- ts(data[,2],start=c(1987,1),frequency = 4)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap = "Figure 1. Time plot of quarterly palay production in Region XI."}
+autoplot(Palay.ts) +  ylab("Volume of Palay (In Metric Tons)")
+```
+
+However, by initial inspection, the plot appears to be trend-stationary. Thus, to further investigate the nature of the data for the region’s palay production, seasonal plots and seasonal subseries plots were created to investigate any seasonal patterns within the data. Figure 2 and 3 shows that there is a seasonal pattern to palay production with third quarter (Q3) and first quarter (Q1) of each year being the highest and lowest respectively, coinciding with the annual harvesting and planting months.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 2. Seasonal plot of quarterly palay production in Region XI."}
+ggseasonplot(Palay.ts) + ggtitle("") +  ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 3. Seasonal subseries plot of quarterly palay production in Region XI."}
+ggsubseriesplot(Palay.ts) +  ylab("Volume of Palay (In Metric Tons)")
+```  
+
+Subsequently, the data underwent further analysis to isolate its constituent components. This decomposition of the raw data facilitated the independent visualization of the trend component and the seasonal component. Such a process confirmed the initial evaluation of the data’s trend-stationarity, exhibited by its trend plot, as shown in Figure 4, showing no distinguishable increase or decrease in the region’s palay production. Following the decomposition, the dataset was divided into training and test sets, with the training set comprising 70% of the total data points, which ranges from the first quarter (Q1) of 1987 to the fourth quarter (Q4) of 2012, and the remaining 30% allotted to the test set, which ranges from the first quarter (Q1) of 2013 to the first quarter (Q1) of 2024.
+
+Various forecasting methods were then applied to the training data and their performance was evaluated on the test set. The naive and seasonal naive methods, Simple Exponential Smoothing (SES), the Exponential Smoothing State Space Model (ETS), and the AutoRegressive Integrated Moving Average (ARIMA) model were applied. Additionally, both additive and multiplicative Holt-Winters models, with and without damping, were fitted. Each model’s forecast accuracy was assessed using a range of metrics, including  Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), Mean Percentage Error (MPE), and Mean Absolute Percentage Error (MAPE).
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 4. STL decomposition of the quarterly palay production in Region XI."}
+Palay.stl <- stlplus(Palay.ts, s.window = "period")
+plot(Palay.stl)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+train <- head(Palay.ts, round(length(Palay.ts)) * 0.7)
+h <- length(Palay.ts) - length(train)
+test <- tail(Palay.ts, h)
+```
+
+**2.3. MODEL TRAINING**
+
+Five (6) major Forecasting methods were chosen to be applied to the training data: (a) Naive method (b) Seasonal naive method (c) Simple exponential smoothing (SES) (d) Error-Trend-Seasonality (ETS) method (e) ARIMA (f) Holt-Winters’ method. 
+
+**a. Naive Method**
+
+The first forecasting technique that was applied and tested was the naive method. The forecast was made by setting all forecast values to be the value of the last observation. This forecast is seen in Figure 5, represented by the navy blue plot. 
+
+```{r message=FALSE, warning=FALSE, out.width="50%", echo=FALSE, fig.align = 'center', fig.cap="Figure 5. Forecast of palay production using naive method."}
+fit_naive <- naive(train, h=45) 
+fit_naive %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)+ggtitle("")+ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+naive.test <- forecast(fit_naive, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(naive.test, test)
+```
+
+Accuracy of the naive forecasts against the test set was also measured. It was found that the Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), Mean Absolute Percentage Error (MAPE), and Mean Absolute Scaled Error (MASE) were equal to 58266.58, 53136.14, 43.3044, and 2.904249 respectively.
+
+**b. Seasonal Naive Method **
+
+Similar to the naive method, seasonal naive method was also employed. However, unlike naive method, the forecast was made by setting each forecast value to be equal to the last observed value from the same season. Considering the data used, the forecast is set to be equal to the same quarter of the previous year. Figure 6 shows the seasonal naive forecasts applied to the training data.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 6. Forecast of palay production using seasonal naive method."}
+fit_snaive <- snaive(train, h=45) 
+fit_snaive %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)+ggtitle("")+ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+snaive.test <- forecast(fit_snaive, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(snaive.test, test)
+```
+
+Evaluation of the seasonal naive forecast against the test set yielded the following error values: Root Mean Squared Error (RMSE) of 32322.59, Mean Absolute Error (MAE) of 24742.43, Mean Absolute Percentage Error (MAPE) of 21.19394, and Mean Absolute Scaled Error (MASE) of 1.352341.	
+
+**c. Simple Exponential Smoothing Method** 
+
+In this method, forecasts are calculated using weighted averages, where the weights decrease exponentially as observations come from further in the past - the smallest weights are associated with the oldest observations. The figure below shows the SES forecasts using the training data.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 7. Forecast of palay production using simple exponential smoothing method."}
+fit_ses <- ses(train, h=45) 
+fit_ses %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)+ggtitle("")+ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+ses.test <- forecast(fit_ses, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(ses.test, test)
+```
+
+Accuracy test was performed and it resulted to the following error metric values: Root Mean Squared Error (RMSE) of 26408.40, Mean Absolute Error (MAE) of 23559.93, Mean Absolute Percentage Error (MAPE) of 20.91139, and Mean Absolute Scaled Error (MASE) of 1.287710.
+
+**d. Error-Trend-Seasonality Method** 
+
+This method is similar to ETS that can handle trends and seasonality. 
+
+```{r message=FALSE, warning=FALSE, , echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 8. Forecast of palay production using error-trend-seasonality (ETS) method."}
+fit_ets <- ets(train) 
+fit_ets %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)+ggtitle("")+ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+ets.test <- forecast(fit_ets, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(ets.test, test)
+```
+
+An accuracy test was conducted, resulting in the following error metric values: Root Mean Squared Error (RMSE) of 18919.78, Mean Absolute Error (MAE) of 14439.30, Mean Absolute Percentage Error (MAPE) of 12.79288, and Mean Absolute Scaled Error (MASE) of 0.7892055.
+
+**e. Holt-Winters Model**
+
+An accuracy test was performed, yielding the following error metric values: Root Mean Squared Error (RMSE) of 17904.11, Mean Absolute Error (MAE) of 13568.05, Mean Absolute Percentage Error (MAPE) of 11.98745, and Mean Absolute Scaled Error (MASE) of 0.7415856.
+
+Three additional forecasting models were employed for palay production after the Holt-Winters additive model. Holt-Winters Additive Damped Model was first done which refines the forecast by considering past errors along with the trend and seasonal patterns. To assess the model's accuracy a test was performed. The results showed a Root Mean Squared Error (RMSE) of 18945.94, Mean Absolute Error (MAE) of 14463.98, Mean Absolute Percentage Error (MAPE) of 12.81362, and Mean Absolute Scaled Error (MASE) of 0.790554. Next, is the Holt-Winters Multiplicative model which accounts for both the long-term growth/decline trend and seasonal variations in palay production. An accuracy test was performed yielding the following error metric values: Root Mean Squared Error (RMSE) of 18673.25, Mean Absolute Error (MAE) of 14406.89, Mean Absolute Percentage Error (MAPE) of 12.71160, and Mean Absolute Scaled Error (MASE) of 0.7874340. Furthermore, Holt-Winter Multiplicative Damped model was also implements which also considers the seasonal patterns. To assess its accuracy, a test was performed. The results showed a Root Mean Squared Error (RMSE) of 19444.07, Mean Absolute Error (MAE) of 14972.05, Mean Absolute Percentage Error (MAPE) of 13.24600, and Mean Absolute Scaled Error (MASE) of 0.8183234.
+
+After analyzing the error metrics (RMSE, MAE, MAPE, and MASE) for all four Holt-Winters models, the results suggest that the Holt-Winters additive model produced the forecast with the lowest error.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 9. Forecast of palay production using Holt-Winters Additive model."}
+fit_hw <- hw(train,h=45, seasonal="additive", damped = FALSE)
+fit_hw %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)+ggtitle("")+ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+hw.test <- forecast(fit_hw, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(hw.test, test)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fit_hw.d <- hw(train,h=45, seasonal="additive", damped = TRUE)
+fit_hw.d %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+hw.test.d <- forecast(fit_hw.d, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(hw.test.d, test)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fit_hwm <- hw(train,h=45, seasonal= "multiplicative", damped = FALSE)
+fit_hwm %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+hwm.test <- forecast(fit_hwm, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(hwm.test, test)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+fit_hwm.d <- hw(train,h=45, seasonal= "multiplicative", damped = TRUE)
+fit_hwm.d %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+hwm.d.test <- forecast(fit_hwm.d, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(hwm.d.test, test)
+```
+
+**f. ARIMA model**
+
+AutoRegressive Integrated Moving Average (ARIMA) is a model that utilizes time series data to forecast future values. Analysis of the training data revealed non-stationarity with strong seasonality. To address this, the researchers implemented seasonal differencing and subsequently conducted the Augmented Dickey-Fuller (ADF) test. The ADF test resulted in a p-value of 0.01, which is less than the commonly used significance level of 0.05. This suggests that the differenced data is likely stationary. 
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+autoplot(train) 
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+train_sdiff <- diff(train, lag = 4)
+autoplot(train_sdiff) 
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+adf.test(train_sdiff)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="60%", fig.align = 'center',fig.cap="Figure 10. ACF and PACF plots of the seasonally differenced data"}
+forecast::tsdisplay(train_sdiff)
+```
+
+The significant spikes in the PACF at lags 4 and 8 suggest a seasonal AR(2). In the non-seasonal lags, there is one significant spike in the PACF and two significant spikes in the ACF suggesting a possible AR(1) term and MA(2) term. Consequently, the initial analysis suggests that a possible model for this data is an ARIMA(1,0,2)(2,1,0)[4]. This model captures trends without the need of differencing, incorporates moving averages of past errors to improve accuracy, and accounts for seasonal variations every 4 periods. Evaluation metrics show the model performs decently on the training data with low errors.
+
+Evaluation of the model's accuracy was done through a test that resulted in the following error metrics: Root Mean Squared Error (RMSE) of 21890.67, Mean Absolute Error (MAE) of 16697.35, Mean Absolute Percentage Error (MAPE) of 15.06479, and Mean Absolute Scaled Error (MASE) of 0.9126227.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+ArimaModel102110 <- Arima(train, order = c(1, 0, 2), seasonal = list(order = c(2, 1, 0), period = 4))  
+
+print(summary(ArimaModel102110))
+checkresiduals(ArimaModel102110)
+
+fit_arima <- auto.arima(train,stepwise = FALSE,approximation = FALSE, trace = FALSE)  
+
+print(summary(fit_arima))
+checkresiduals(fit_arima)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, out.width="50%", fig.align = 'center', fig.cap="Figure 11. Forecast of palay production using ARIMA model."}
+fit_arima <- Arima(train, order=c(1,0,2), include.drift = FALSE, seasonal = list(order=c(2,1,0),period=4)) 
+fit_arima %>%
+  forecast(h=45) %>%
+  autoplot()+autolayer(test)+ggtitle("")+ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+arima.test <- forecast(fit_arima, h=45)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+accuracy(arima.test, test)
+```
+
+# 3 RESULTS AND DISCUSSION
+
+This section delves into the performance of the implemented forecasting models, analyzing their accuracy through errors metrics and highlighting the most suitable model for forecasting Davao Region’s palay production.
+
+**3.1 Model Comparison and Validation**
+
+After implementing different forecasting methods, the models’ robustness were validated by checking their accuracy against the test set with Table 1 showing the summary of the error metrics for the various techniques employed. It can be noticed that the worst model to forecast the region’s palay production would be the Naive method which garnered the highest error measurement for the four error metrics. On the other hand, Holt-Winters’ Additive method, Error-Trend-Seasonality  (ETS) method, and the ARIMA Model were found to be the top three best models to use in forecasting the palay production in the region since these three acquired the least values for the four error metrics when checked against the test set. More so, the performance of these three models is visualized in Figure 12.
+
+```{r warning=FALSE, echo=FALSE}
+library(knitr)
+
+data <- data.frame(
+  Model = c("Naive Method", "Seasonal Naive Method", "SES Method", "ETS(A,N,A)", "Holt-Winters additive", "ARIMA(1,0,2)(2,1,0)[4] "),
+  RMSE = c("58266.58", "32232.59", "26408.40", "18919.78", "17904.11","21890.67"),
+  MAE = c("53136.14", "24742.43", "23559.93", "14439.30", "13568.05", "16697.35"),
+  MAPE = c("43.30", "21.19", "20.91", "12.79", "11.99", "15.06"),
+  MASE = c("2.90", "1.35", "1.29", "0.79", "0.74", "0.91")
+)
+
+kable(data, caption = "Table 1. Summary of the error metrics of the different forecasting models employed.")
+```
+
+```{r message=FALSE, warning=FALSE, out.width="70%", echo=FALSE, fig.align = 'center', fig.cap="Figure 12. Forecast of palay production in Region XI using the top 3 best models."}
+autoplot(window(Palay.ts, start=2010)) + autolayer(ets.test$mean, series="ETS(A,N,A)") +
+  autolayer(arima.test$mean, series="ARIMA(1,0,2)(2,1,0)[4]") + autolayer(hw.test$mean, series="Holt-Winters' Additive") +
+  labs(y="Volume of Palay (In Metric Tons)", title="") +
+  guides(colour=guide_legend(title="Forecast"))
+```
+
+Ultimately, with Holt-Winters additive model having the least measured error metrics, this model should be used to generate a final forecast of Davao Region’s palay production in the next five years. However, before proceeding, the model’s residuals were checked to make sure that the residuals should only display white noise. This is done by plotting the ACF of the residuals, and doing a portmanteau test of the residuals.
+
+```{r, message=FALSE, warning=FALSE, results=FALSE, echo=FALSE, out.width="65%", fig.align = 'center', fig.cap="Figure 13. Residuals from Holt-Winters Additive Method."}
+checkresiduals(fit_hw)
+```
+
+Examination of the autocorrelation function (ACF) reveals a single, significant spike at lag 13 out of 20 lags examined. This observation remains consistent with the characteristics of white noise. To further substantiate this finding, a Ljung-Box test (portmanteau test) was conducted to statistically assess the null hypothesis that the residuals are white noise. The resulting p-value of 0.2762 is high, which strongly supports the null hypothesis, indicating that the residuals exhibit behavior similar to white noise.
+
+Having established the white noise characteristics of the residuals, the model can now be confidently employed for forecasting. The predicted values for the next five years are presented in Figure 14. It can be seen that in the next five years, there is still no obvious increase in the trend of palay production in the region. Further insights and recommendations as to the consequence of this forecast will be detailed in the preceding chapter.
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+fit_hw <- hw(Palay.ts,h=45, seasonal="additive", damped = FALSE)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, out.width="65%", fig.align = 'center', fig.cap="Figure 14. Final five-year forecast for palay production in Region XI."}
+fcst <- forecast(fit_hw,h=20)
+autoplot(fcst) + ggtitle("") + xlab("Years") + ylab("Volume of Palay (In Metric Tons)")
+```
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+fcst <- forecast(fit_hw,h=19)
+print(summary(fcst))
+```
+
+# 4 CONCLUSION
+
+In this study, the proponents tested and compared different forecasting models that would best show the palay production in Davao Region for the coming years. Through a systematic process of data preparation, analysis, model fitting, and evaluation, the researchers were able to identify Holt-Winters Additive model as the most suitable for forecasting palay production in the region. 
+
+The chosen model was able to show a five-year projection for palay production which still exhibits a trend being stationary. This result can provide valuable insights to stakeholders and how they can take part in whatever this result may imply.
+
+First, **policymakers and relevant government agencies**, including the Department of Agriculture Regional Field Office XI (DA RFO XI), should prioritize the development and implementation of legislative initiatives and programs aimed at stimulating growth in the region's palay production. The persistence of stationary palay output, as evidenced in the forecast, coincides with a rapidly increasing population and escalating demand for this essential commodity. This poses a significant threat to regional food security in the near future. Furthermore, continued reliance on palay imports from external sources to satisfy regional demand would further put the local agricultural sector in peril.
+
+This study highlights the need for targeted development **initiatives aimed at Filipino palay farmers**. Without access to necessary technologies facilitated by government authorities, these farmers risk being left behind, continuing traditional practices that may result in suboptimal yields and potentially higher production costs. The absence of improvement efforts could lead to a continued dependence on palay imports from external sources to meet regional demand. This, in turn, would further jeopardize the local agricultural sector and exacerbate existing challenges in domestic production. First quarter of 2024 alone, the country takes the top global spot in rice importation at an estimated volume of 3.8 million metric tons (MT) [3].
+
+This study emphasizes the importance of understanding the data and how it evokes the urgency of addressing possible implications of what has been projected. By implementing the recommendations outlined above, policymakers and stakeholders can work collaboratively to ensure regional food security and boost the local agricultural sector. Moving forward, further research efforts could explore potential solutions to enhance palay yields and identify sustainable agricultural practices tailored to the specific needs of Davao Region's farmers.
+
+# 5 REFERENCES
+
+[1] “The Value of Production in Agriculture and Fisheries Inches up by 0.05 Percent in the First Quarter of 2024 (at Constant 2018 Prices).” Philippine Statistics Authority. https://www.psa.gov.ph/statistics/ppa-main/national [accessed May 28, 2024]
+
+[2] I.F.C. Mendoza. “DA-Davao notes increase in palay production in region.” SunStar. https://www.sunstar.com.ph/davao/local-news/da-davao-notes-increase-in-palay-production-in-region [accessed May 27, 2024]
+
+[3] “Philippines Retains Top Spot in Global Rice Imports for 2024.” International Trade Council. https://tradecouncil.org/philippines-retains-top-spot-in-global-rice-imports-for-2024/ [accessed June 4, 2024]
+
+
+
+
